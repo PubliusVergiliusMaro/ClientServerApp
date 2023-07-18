@@ -1,9 +1,7 @@
 ﻿using ClientServerApp.Common;
-using Models.DTOs;
-using Models.Helpers;
+using ClientServerApp.Models.Helpers;
+using ClientServerApp.Models.Models;
 using Newtonsoft.Json;
-using System.Drawing;
-using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -22,10 +20,10 @@ namespace Server.UDP
 		private static IPEndPoint lastSended;
 
 		static void Main(string[] args)
-		{ 
+		{
 			connectedClients = new List<ClientData>();
 			GetIPFromFile("C:\\Heap\\Programming\\StudyProjects\\ClientServerApp\\IPs.txt");// Change on your Path to file
-			
+
 			udpEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 			udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			udpSocket.Bind(udpEndPoint);
@@ -35,7 +33,7 @@ namespace Server.UDP
 		}
 		static async void StartListening()
 		{
-            await Console.Out.WriteLineAsync("<-=-=-=-=-= Server started =-=-=-=-=->");
+			await Console.Out.WriteLineAsync("<-=-=-=-=-= Server started =-=-=-=-=->");
 			CheckStatus();
 			while (true)
 			{
@@ -75,8 +73,8 @@ namespace Server.UDP
 		}
 		private static void Alive()
 		{
-            Console.WriteLine($"{senderEndPoint} is alive");
-        }
+			Console.WriteLine($"{senderEndPoint} is alive");
+		}
 
 		static void Connecting()
 		{
@@ -91,9 +89,9 @@ namespace Server.UDP
 					client.IsMobileClientConnected = true;
 					if (client.IsDekstopClientConnected)
 					{
-						connectionMessage = new RequestData { Id=0,ActionName=RequestActions.XamarinConnectionStatus,Message = RequestMessages.True}.ToJson();
+						connectionMessage = new RequestData { Id=0, ActionName=RequestActions.XamarinConnectionStatus, Message = RequestMessages.True }.ToJson();
 						udpSocket.SendTo(Encoding.UTF8.GetBytes(connectionMessage), client.DekstopEndPoint);//"Xamarin client connected"
-						connectionMessage = new RequestData { Id=0,ActionName=RequestActions.WpfConnectionStatus,Message = RequestMessages.True}.ToString();//.ToJson();
+						connectionMessage = new RequestData { Id=0, ActionName=RequestActions.WpfConnectionStatus, Message = RequestMessages.True }.ToString();//.ToJson();
 						udpSocket.SendTo(Encoding.UTF8.GetBytes(connectionMessage), client.MobileEndPoint);//"Wpf client connected" 
 					}
 					else
@@ -149,7 +147,7 @@ namespace Server.UDP
 				{
 					if (client.IsMobileClientConnected)
 					{
-						greetingMsg = new RequestData() { Id=0, ActionName = RequestActions.Greeting,Message="Wpf client is Greeting you" }.ToString();//.ToJson();
+						greetingMsg = new RequestData() { Id=0, ActionName = RequestActions.Greeting, Message="Wpf client is Greeting you" }.ToString();//.ToJson();
 						udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMsg), client.MobileEndPoint);//"Wpf client is Greeting you"
 					}
 					else
@@ -172,8 +170,8 @@ namespace Server.UDP
 				{
 					if (client.IsMobileClientConnected && client.IsDekstopClientConnected)
 					{
-						await SendChecker(client, client.MobileEndPoint,true);
-						await SendChecker(client, client.DekstopEndPoint,false);
+						await SendChecker(client, client.MobileEndPoint, true);
+						await SendChecker(client, client.DekstopEndPoint, false);
 					}
 					else if (client.IsMobileClientConnected)
 					{
@@ -181,13 +179,13 @@ namespace Server.UDP
 					}
 					else
 					{
-						await SendChecker(client, client.DekstopEndPoint,false);
+						await SendChecker(client, client.DekstopEndPoint, false);
 					}
 				}
 				await Task.Delay(10_000);// 10 seconds
 			}
 		}
-	
+
 		static async Task SendChecker(ClientData client, IPEndPoint clientEndPoint, bool isForXamarin)
 		{
 			string isAliveMsg = "";
@@ -236,7 +234,7 @@ namespace Server.UDP
 		}
 		private static void GetIPFromFile(string path)
 		{
-			string[]lines = File.ReadAllLines(path);
+			string[] lines = File.ReadAllLines(path);
 			ip = lines[0];
 			connectedClients.Add(new ClientData
 			{

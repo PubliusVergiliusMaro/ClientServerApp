@@ -1,17 +1,14 @@
-﻿using Newtonsoft.Json;
-
-namespace Models.Helpers
+﻿namespace XamarinClient.UDP
 {
 	public class RequestData
 	{
 		public int Id { get; set; }
 		public string ActionName { get; set; }
 		public string Message { get; set; }
-		public string ToJson() => JsonConvert.SerializeObject(this);
-		/// <summary>
-		/// Using for sending requests on Xamarin
-		/// </summary>
-		/// <returns></returns>
+		public string ToJson()
+		{
+			return $"{{\"Id\":{Id},\"ActionName\":\"{ActionName}\",\"Message\":\"{Message}\"}}";
+		}
 		public override string ToString()
 		{
 			return $"{Id}:{ActionName}:{Message}";

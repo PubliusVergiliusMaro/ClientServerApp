@@ -32,7 +32,7 @@ namespace XamarinClient.UDP
 				data = new StringBuilder();
 
 				serverEndPoint = new IPEndPoint(IPAddress.Parse("111.222.3.444"), 8081);// Change On Yours Server IP
-				var connectingMessage = new RequestManager() { Id = currentID, ActionName = "Connecting", Message = "message" }.ToJson();
+				var connectingMessage = new RequestData() { Id = currentID, ActionName = "Connecting", Message = "message" }.ToJson();
 				udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 
 				InitializeComponent();
@@ -124,13 +124,13 @@ namespace XamarinClient.UDP
 
 		private void SendAliveStatus()
 		{
-			var connectingMessage = new RequestManager { Id = currentID, ActionName="Alive", Message="alive" }.ToJson();
+			var connectingMessage = new RequestData { Id = currentID, ActionName="Alive", Message="alive" }.ToJson();
 			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 		}
 
 		private void GreetingButton_Clicked(object sender, EventArgs e)
 		{
-			var connectingMessage = new RequestManager { Id = currentID, ActionName="Greeting", Message="alive" }.ToJson();
+			var connectingMessage = new RequestData { Id = currentID, ActionName="Greeting", Message="alive" }.ToJson();
 			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 		}
 		private async Task AppendData(string line)

@@ -3,13 +3,12 @@ using System.Net;
 using System;
 using System.Windows;
 using System.Text;
-using Models.Helpers;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using System.Windows.Media.Converters;
 using System.Threading.Tasks;
 using ClientServerApp.Common;
 using System.IO;
+using ClientServerApp.Models.Helpers;
+using Newtonsoft.Json;
 
 namespace WPFClient.UDP
 {
@@ -18,7 +17,8 @@ namespace WPFClient.UDP
 	/// </summary>
 	public partial class MainWindow : Window
 	{
-		private static string ip = GetIPFromFile("C:\\Heap\\Programming\\StudyProjects\\ClientServerApp\\IPs.txt");// Change on your Path to file
+		private static string ip;
+		private static string serverIp;
 		private const int port = 8082;
 		private const int currentId = 1;
 
@@ -26,17 +26,18 @@ namespace WPFClient.UDP
 		private readonly IPEndPoint serverEndPoint;
 		private readonly IPEndPoint senderEndPoint;
 		private readonly Socket udpSocket;
-		private readonly StringBuilder data;//
+		private readonly StringBuilder data;
 		public MainWindow()
 		{
+			GetIPFromFile("C:\\Heap\\Programming\\StudyProjects\\ClientServerApp\\IPs.txt");// Change on your Path to file
 			udpEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 			udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			udpSocket.Bind(udpEndPoint);
 
-			serverEndPoint = new IPEndPoint(IPAddress.Parse("111.222.3.444"), 8081);// Change On Your Server IP
+			serverEndPoint = new IPEndPoint(IPAddress.Parse(serverIp), 8081);
 			var connectingMessage = new RequestData() { Id = currentId, ActionName = "Connecting", Message = "" }.ToJson();
 			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
-			data = new StringBuilder();//
+			data = new StringBuilder();
 			InitializeComponent();
 			StartListening();
 		}
@@ -56,10 +57,10 @@ namespace WPFClient.UDP
 						var size = await udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, senderEndPoint);
 						answer = Encoding.UTF8.GetString(buffer,0,size.ReceivedBytes);
 						request = JsonConvert.DeserializeObject<RequestData>(answer);
-						var methods = new Dictionary<string, Action>//
+						var methods = new Dictionary<string, Action>
 						{
 							{RequestActions.IsAlive, SendAliveStatus },
-							{RequestActions.WpfConnectionStatus, () => DisplayConnectionStatus(bool.Parse(request.Message)) },//
+							{RequestActions.WpfConnectionStatus, () => DisplayConnectionStatus(bool.Parse(request.Message)) },
 							{RequestActions.XamarinConnectionStatus, () => XamarinConnectionStatus(bool.Parse(request.Message)) },
 							{RequestActions.Greeting, () => GetGreeting(request.Message) }
 						};
@@ -89,21 +90,21 @@ namespace WPFClient.UDP
 			}
 		}
 
-		private async void DisplayConnectionStatus(bool succesfulStatus)//
+		private async void DisplayConnectionStatus(bool succesfulStatus)
 		{
 			if (succesfulStatus)
 			{
-				await AppendData("Succesfuly connected");//
+				await AppendData("Succesfuly connected");
             }
 			else
 			{
-				await AppendData("Conection failed");//
+				await AppendData("Conection failed");
 			}
 		}
 
 		private void SendAliveStatus()
 		{
-			var connectingMessage = new RequestData { Id = currentId, ActionName=RequestActions.Alive, Message="I`m alive"}.ToJson();//$"greeting:Xamarin client has been connected.";
+			var connectingMessage = new RequestData { Id = currentId, ActionName=RequestActions.Alive, Message="I`m alive"}.ToJson();
 			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 		}
 
@@ -113,16 +114,16 @@ namespace WPFClient.UDP
 			udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMessage), serverEndPoint);
 			await AppendData("Succesfully sent greeting to server for redirecting message");
 		}
-		private async Task AppendData(string line)//
+		private async Task AppendData(string line)
 		{
 			data.AppendLine(line);
 			await Dispatcher.InvokeAsync(() => Message.Text = data.ToString());
 		}
-			private static string GetIPFromFile(string path)
+		private static void GetIPFromFile(string path)
 		{
 			string[]lines = File.ReadAllLines(path);
-			string ipAdress = lines[0];
-			return ipAdress;
+			ip = lines[0];
+			serverIp = lines[1];
 		}
 		private static string GetLocalIP()
 		{
