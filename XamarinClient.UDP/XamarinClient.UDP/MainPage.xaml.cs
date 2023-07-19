@@ -1,13 +1,13 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Xamarin.Forms;
+using XamarinClient.UDP.Common;
+using XamarinClient.UDP.Helpers;
 
 namespace XamarinClient.UDP
 {
@@ -38,9 +38,13 @@ namespace XamarinClient.UDP
 				InitializeComponent();
 				StartListening();
 			}
-			catch(Exception ex)
+			catch (SocketException e)
 			{
-				throw new Exception();
+				throw new Exception(e.Message);
+			}
+			catch (Exception ex)
+			{
+				throw new Exception(ex.Message);
 			}
 		}
 		private async void StartListening()
@@ -58,11 +62,11 @@ namespace XamarinClient.UDP
 					do
 					{
 						var size = await udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, senderEndPoint);
-						
+
 						//answer format -> ID:ActionName:Message
-						answer = Encoding.UTF8.GetString(buffer,0,size.ReceivedBytes);
+						answer = Encoding.UTF8.GetString(buffer, 0, size.ReceivedBytes);
 						string[] parts = answer.Split(':');
-						
+
 						if (int.TryParse(parts[0], out int intValue))
 						{
 							id = intValue;
@@ -156,6 +160,6 @@ namespace XamarinClient.UDP
 			}
 			return localIP;
 		}
-		
+
 	}
 }

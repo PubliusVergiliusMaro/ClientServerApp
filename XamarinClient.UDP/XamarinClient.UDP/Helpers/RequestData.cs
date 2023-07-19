@@ -1,6 +1,6 @@
-﻿namespace XamarinClient.UDP
+﻿namespace XamarinClient.UDP.Helpers
 {
-	public class RequestData
+	internal class RequestData
 	{
 		public int Id { get; set; }
 		public string ActionName { get; set; }

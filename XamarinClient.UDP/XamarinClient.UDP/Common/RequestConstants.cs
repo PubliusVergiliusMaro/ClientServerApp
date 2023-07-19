@@ -1,6 +1,6 @@
-﻿namespace XamarinClient.UDP
+﻿namespace XamarinClient.UDP.Common
 {
-	public class RequestActions
+	internal class RequestActions
 	{
 		/// <summary>
 		/// Displays for client that server asks if client is online
@@ -23,7 +23,7 @@
 		/// </summary>
 		public const string Alive = "Alive";
 	}
-	public class RequestMessages
+	internal class RequestMessages
 	{
 		/// <summary>
 		/// Message that server sends with IsAlive Request Action

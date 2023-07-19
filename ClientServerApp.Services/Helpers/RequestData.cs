@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace ClientServerApp.Models.Helpers
+namespace ClientServerApp.Services.Helpers
 {
 	public class RequestData
 	{

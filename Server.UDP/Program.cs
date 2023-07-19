@@ -1,6 +1,6 @@
 ﻿using ClientServerApp.Common;
-using ClientServerApp.Models.Helpers;
-using ClientServerApp.Models.Models;
+using ClientServerApp.Database.Models;
+using ClientServerApp.Services.Helpers;
 using Newtonsoft.Json;
 using System.Net;
 using System.Net.Sockets;

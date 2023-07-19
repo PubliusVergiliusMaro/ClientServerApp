@@ -1,14 +1,14 @@
-﻿using System.Net.Sockets;
-using System.Net;
-using System;
-using System.Windows;
-using System.Text;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using ClientServerApp.Common;
-using System.IO;
-using ClientServerApp.Models.Helpers;
+﻿using ClientServerApp.Common;
+using ClientServerApp.Services.Helpers;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
 
 namespace WPFClient.UDP
 {
@@ -55,7 +55,7 @@ namespace WPFClient.UDP
 					do
 					{
 						var size = await udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, senderEndPoint);
-						answer = Encoding.UTF8.GetString(buffer,0,size.ReceivedBytes);
+						answer = Encoding.UTF8.GetString(buffer, 0, size.ReceivedBytes);
 						request = JsonConvert.DeserializeObject<RequestData>(answer);
 						var methods = new Dictionary<string, Action>
 						{
@@ -80,7 +80,7 @@ namespace WPFClient.UDP
 		}
 		private async void XamarinConnectionStatus(bool succesfulStatus)
 		{
-			if(succesfulStatus)
+			if (succesfulStatus)
 			{
 				await AppendData("Xamarin client is connected");
 			}
@@ -95,7 +95,7 @@ namespace WPFClient.UDP
 			if (succesfulStatus)
 			{
 				await AppendData("Succesfuly connected");
-            }
+			}
 			else
 			{
 				await AppendData("Conection failed");
@@ -104,7 +104,7 @@ namespace WPFClient.UDP
 
 		private void SendAliveStatus()
 		{
-			var connectingMessage = new RequestData { Id = currentId, ActionName=RequestActions.Alive, Message="I`m alive"}.ToJson();
+			var connectingMessage = new RequestData { Id = currentId, ActionName=RequestActions.Alive, Message="I`m alive" }.ToJson();
 			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 		}
 
@@ -121,7 +121,7 @@ namespace WPFClient.UDP
 		}
 		private static void GetIPFromFile(string path)
 		{
-			string[]lines = File.ReadAllLines(path);
+			string[] lines = File.ReadAllLines(path);
 			ip = lines[0];
 			serverIp = lines[1];
 		}
