@@ -8,6 +8,7 @@ using XamarinClient.UDP.Common;
 using System.Threading.Tasks;
 using System.IO;
 using XamarinClient.UDP.Helpers;
+using System.Threading;
 
 namespace XamarinClient.UDP.ViewModels
 {
@@ -25,7 +26,7 @@ namespace XamarinClient.UDP.ViewModels
 
 				serverEndPoint = new IPEndPoint(IPAddress.Parse("111.222.3.444"), 8081);// Change On Yours Server IP
 				var connectingMessage = new RequestData() { Id = currentID, ActionName = "Connecting", Message = "message" }.ToJson();
-				udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
+				Send(connectingMessage, serverEndPoint);
 
 				StartListening();
 			}
@@ -52,10 +53,10 @@ namespace XamarinClient.UDP.ViewModels
 					string message = "";
 					do
 					{
-						var size = await udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, senderEndPoint);
-
+						var result = await udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, new IPEndPoint(IPAddress.Any, 0));
+						senderEndPoint = result.RemoteEndPoint;
 						//answer format -> ID:ActionName:Message
-						answer = Encoding.UTF8.GetString(buffer, 0, size.ReceivedBytes);
+						answer = Encoding.UTF8.GetString(buffer, 0, result.ReceivedBytes);
 						string[] parts = answer.Split(':');
 
 						if (int.TryParse(parts[0], out int intValue))
@@ -80,55 +81,49 @@ namespace XamarinClient.UDP.ViewModels
 			}
 			catch (Exception ex)
 			{
-				await AppendData(ex.Message);
+				 AppendData(ex.Message);
 			}
 		}
 
-		private async void GetGreeting(string message)
+		private void GetGreeting(string message)
 		{
-			await AppendData(message);
+			 AppendData(message);
 		}
 
-		private async void WpfConnectionStatus(string succesfulStatus)
+		private void WpfConnectionStatus(string successfulStatus)
 		{
-			if (succesfulStatus == "true")
+			if (successfulStatus == "true")
 			{
-				await AppendData("Wpf client is connected");
+				AppendData("Wpf client is connected");
 			}
-			else if (succesfulStatus == "false")
+			else if (successfulStatus == "false")
 			{
-				await AppendData("Wpf client in not connected");
+				AppendData("Wpf client in not connected");
 			}
 			else
-				throw new Exception("succesfulStatus is not equal true/false format.");
+				throw new Exception("Status is not equal true/false format.");
 		}
 
-		private async void DisplayConnectionStatus(string succesfulStatus)
+		private async void DisplayConnectionStatus(string successfulStatus)
 		{
-			if (succesfulStatus == "true")
+			if (successfulStatus == "true")
 			{
-				await AppendData("Succesfully connected");
+				 AppendData("Succesfully connected");
 			}
-			else if (succesfulStatus == "false")
+			else if (successfulStatus == "false")
 			{
-				await AppendData("Connection failed");
+				 AppendData("Connection failed");
 			}
 			else
-				throw new Exception("succesfulStatus is not equal true/false format.");
+				throw new Exception("Status is not equal true/false format.");
 		}
 
 		private void SendAliveStatus()
 		{
 			var connectingMessage = new RequestData { Id = currentID, ActionName="Alive", Message="alive" }.ToJson();
-			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
+			Send(connectingMessage, serverEndPoint);
 		}
-
-		private void GreetingButton_Clicked(object sender, EventArgs e)
-		{
-			var connectingMessage = new RequestData { Id = currentID, ActionName="Greeting", Message="alive" }.ToJson();
-			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
-		}
-		private async Task AppendData(string line)
+		private void AppendData(string line)
 		{
 			data.AppendLine(line);
 			Device.BeginInvokeOnMainThread(() => ActivitiesInfo = data.ToString());
@@ -151,7 +146,28 @@ namespace XamarinClient.UDP.ViewModels
 			}
 			return localIP;
 		}
+		private async void SendGreeting()
+		{
+			var connectingMessage = new RequestData { Id = currentID, ActionName="Greeting", Message="alive" }.ToJson();
+			Send(connectingMessage, serverEndPoint);
+		}
+		private void Send(string message,IPEndPoint endPoint)
+		{
+			byte[] buffer = Encoding.UTF8.GetBytes(message);
 
+			var waitHandle = new ManualResetEvent(false);
+			var sendEvent = new SocketAsyncEventArgs();
+
+			sendEvent.RemoteEndPoint = endPoint;
+			sendEvent.SetBuffer(buffer, 0, buffer.Length);
+			sendEvent.Completed += (s, e) => waitHandle.Set();
+
+			udpSocket.SendToAsync(sendEvent);
+			if (sendEvent.SocketError != SocketError.Success)
+			{
+				throw new SocketException((int)sendEvent.SocketError);
+			}
+		}
 		private static string ip = "111.222.3.444";// Change On Yours Mobile IP
 		private const int port = 8083;
 		private const int currentID = 1;
@@ -168,14 +184,6 @@ namespace XamarinClient.UDP.ViewModels
 			get => _activitiesInfo;
 			set => SetProperty(ref _activitiesInfo, value);
 		}
-		private void SendGreeting()
-		{
-			var connectingMessage = new RequestData { Id = currentID, ActionName="Greeting", Message="alive" }.ToJson();
-			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
-			//byte[] buffer = Encoding.UTF8.GetBytes(connectingMessage);	
-			//await udpSocket.SendToAsync(buffer, 0, buffer.Length, SocketFlags.None, serverEndPoint);
-		}
-
 		public Command SendGreetingCommand { get; }
 	}
 }

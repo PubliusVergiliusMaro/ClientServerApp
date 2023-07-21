@@ -27,8 +27,8 @@ namespace Server.UDP
 			udpEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 			udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			udpSocket.Bind(udpEndPoint);
-			StartListening();
 
+			StartListening();
 			Console.ReadKey();
 		}
 		static async void StartListening()
@@ -40,50 +40,46 @@ namespace Server.UDP
 				try
 				{
 					var buffer = new byte[256];
-					var size = 0;
 					var data = new StringBuilder();
 					var request = new RequestData();
 
 					senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
 					do
 					{
-						size = udpSocket.ReceiveFrom(buffer, ref senderEndPoint);
-						IPEndPoint tmpSender = (IPEndPoint)senderEndPoint;
-						if (tmpSender.Address == IPAddress.None)
-						{
-							MakeNotAlive(lastSended);
-						}
-						request = JsonConvert.DeserializeObject<RequestData>(Encoding.UTF8.GetString(buffer));
-						var methods = new Dictionary<string, Action>
+						var result = await udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, new IPEndPoint(IPAddress.Any, 0));
+						senderEndPoint = result.RemoteEndPoint;
+						
+						request = JsonConvert.DeserializeObject<RequestData>(Encoding.UTF8.GetString(buffer,0,result.ReceivedBytes));
+						var methods = new Dictionary<string, Func<Task>>
 						{
 							{ "Greeting", Greeting },
 							{ "Connecting", Connecting },
-							{ "Alive", Alive }
+							{ "Alive", Alive },
 						};
 
-						methods[request.ActionName]();
+						await methods[request.ActionName]();
 					}
 					while (udpSocket.Available > 0);
 				}
 				catch (SocketException ex)
 				{
-					MakeNotAlive(lastSended);
+					await MakeNotAlive(lastSended);
 				}
 			}
 		}
-		private static void Alive()
+		static async Task Alive()
 		{
-			Console.WriteLine($"{senderEndPoint} is alive");
+			await Console.Out.WriteLineAsync($"{senderEndPoint} is alive");
 		}
 
-		static void Connecting()
+		static async Task Connecting()
 		{
 			string connectionMessage = "";
 			foreach (var client in connectedClients)
 			{
 				if (client.MobileEndPoint.Equals(senderEndPoint))
 				{
-					Console.WriteLine("Xamarin client connected");
+					await Console.Out.WriteLineAsync("Xamarin client connected");
 					connectionMessage = new RequestData { Id = 0, ActionName=RequestActions.XamarinConnectionStatus, Message=RequestMessages.True }.ToString();//.ToJson();
 					udpSocket.SendTo(Encoding.UTF8.GetBytes(connectionMessage), client.MobileEndPoint);//Succesfully connected"), client.MobileEndPoint);
 					client.IsMobileClientConnected = true;
@@ -102,7 +98,7 @@ namespace Server.UDP
 				}
 				else if (client.DekstopEndPoint.Equals(senderEndPoint))
 				{
-					Console.WriteLine("Wpf client connected");
+					await Console.Out.WriteLineAsync("Wpf client connected");
 					connectionMessage = new RequestData { Id = 0, ActionName=RequestActions.WpfConnectionStatus, Message=RequestMessages.True }.ToJson();
 					udpSocket.SendTo(Encoding.UTF8.GetBytes(connectionMessage), client.DekstopEndPoint);//Succesfully connected"), client.MobileEndPoint);
 					client.IsDekstopClientConnected = true;
@@ -121,11 +117,11 @@ namespace Server.UDP
 				}
 				else
 				{
-					Console.WriteLine("Unknown client connected");
+					await Console.Out.WriteLineAsync("Unknown client connected");
 				}
 			}
 		}
-		static void Greeting()
+		static async Task Greeting()
 		{
 			string greetingMsg;
 			foreach (var client in connectedClients)
@@ -134,13 +130,13 @@ namespace Server.UDP
 				{
 					if (client.IsDekstopClientConnected)
 					{
-						greetingMsg = new RequestData() { Id=0, ActionName=RequestActions.Greeting, Message="Xamarin client is Greeting you" }.ToJson();
-						udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMsg), client.DekstopEndPoint);//"Xamarin client is Greeting you"
+						greetingMsg = new RequestData() { Id=0, ActionName=RequestActions.Greeting, Message="Xamarin client is Greeting you" }.ToJson();		
+						await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(greetingMsg), client.DekstopEndPoint);//"Xamarin client is Greeting you"
 					}
 					else
 					{
 						greetingMsg = new RequestData { Id=0, ActionName= RequestActions.WpfConnectionStatus, Message=RequestMessages.False }.ToString();//.ToJson();
-						udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMsg), client.MobileEndPoint);//"Wpf client is not connected"
+						await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(greetingMsg), client.MobileEndPoint);//"Wpf client is not connected"
 					}
 				}
 				else if (client.DekstopEndPoint.Equals(senderEndPoint))
@@ -148,12 +144,12 @@ namespace Server.UDP
 					if (client.IsMobileClientConnected)
 					{
 						greetingMsg = new RequestData() { Id=0, ActionName = RequestActions.Greeting, Message="Wpf client is Greeting you" }.ToString();//.ToJson();
-						udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMsg), client.MobileEndPoint);//"Wpf client is Greeting you"
+						await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(greetingMsg), client.MobileEndPoint);//"Wpf client is Greeting you"
 					}
 					else
 					{
 						greetingMsg = new RequestData { Id=0, ActionName = RequestActions.XamarinConnectionStatus, Message=RequestMessages.False }.ToJson();
-						udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMsg), client.DekstopEndPoint);//"Xamarin client is not connected"
+						await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(greetingMsg), client.DekstopEndPoint);//"Xamarin client is not connected"
 					}
 				}
 				else
@@ -198,10 +194,10 @@ namespace Server.UDP
 			{
 				isAliveMsg = new RequestData { Id = 0, ActionName = RequestActions.IsAlive, Message = RequestMessages.IsAlive }.ToJson();
 			}
-			udpSocket.SendTo(Encoding.UTF8.GetBytes(isAliveMsg), clientEndPoint);
+			await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(isAliveMsg), clientEndPoint);
 			await Console.Out.WriteLineAsync("Send");
 		}
-		static void MakeNotAlive(IPEndPoint clientEndPoint)
+		static async Task MakeNotAlive(IPEndPoint clientEndPoint)
 		{
 			string disconectedMsg;
 			foreach (var client in connectedClients)
@@ -209,26 +205,26 @@ namespace Server.UDP
 				if (client.MobileEndPoint.Equals(clientEndPoint))
 				{
 					client.IsMobileClientConnected = false;
-					Console.WriteLine("Xamarin client disconected");
+					await Console.Out.WriteLineAsync("Xamarin client disconected");
 					if (client.IsDekstopClientConnected)
 					{
 						disconectedMsg = new RequestData { Id = 0, ActionName = RequestActions.XamarinConnectionStatus, Message=RequestMessages.False }.ToJson();
-						udpSocket.SendTo(Encoding.UTF8.GetBytes(disconectedMsg), client.DekstopEndPoint);//"Xamarin client disconected"
+						await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(disconectedMsg), client.DekstopEndPoint);//"Xamarin client disconected"
 					}
 				}
 				else if (client.DekstopEndPoint.Equals(clientEndPoint))
 				{
 					client.IsDekstopClientConnected = false;
-					Console.WriteLine("Wpf client disconected");
+					await Console.Out.WriteLineAsync("Wpf client disconected");
 					if (client.IsDekstopClientConnected)
 					{
 						disconectedMsg = new RequestData { Id = 0, ActionName = RequestActions.WpfConnectionStatus, Message=RequestMessages.False }.ToString();//.ToJson();
-						udpSocket.SendTo(Encoding.UTF8.GetBytes(disconectedMsg), client.MobileEndPoint);//"Wpf client disconected"
+						await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(disconectedMsg), client.MobileEndPoint);//"Wpf client disconected"
 					}
 				}
 				else
 				{
-					Console.WriteLine("Unknown client");
+					await Console.Out.WriteLineAsync("Unknown client");
 				}
 			}
 		}

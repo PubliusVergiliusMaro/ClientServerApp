@@ -3,11 +3,14 @@ using ClientServerApp.Services.Helpers;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using WPFClient.UDP.Commands;
@@ -45,12 +48,14 @@ namespace WPFClient.UDP.ViewModels
 					EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
 					do
 					{
-						var size = await udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, senderEndPoint);
-						answer = Encoding.UTF8.GetString(buffer, 0, size.ReceivedBytes);
+						var result = await udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, new IPEndPoint(IPAddress.Any, 0));
+						senderEndPoint = result.RemoteEndPoint;
+
+						answer = Encoding.UTF8.GetString(buffer, 0, result.ReceivedBytes);
 						request = JsonConvert.DeserializeObject<RequestData>(answer);
 						var methods = new Dictionary<string, Action>
 						{
-							{RequestActions.IsAlive, SendAliveStatus },
+							{RequestActions.IsAlive, async() => await SendAliveStatus() },
 							{RequestActions.WpfConnectionStatus, () => DisplayConnectionStatus(bool.Parse(request.Message)) },
 							{RequestActions.XamarinConnectionStatus, () => XamarinConnectionStatus(bool.Parse(request.Message)) },
 							{RequestActions.Greeting, () => GetGreeting(request.Message) }
@@ -62,43 +67,43 @@ namespace WPFClient.UDP.ViewModels
 			}
 			catch (Exception ex)
 			{
-				await AppendData(ex.Message);
+				AppendData(ex.Message);
 			}
 		}
-		private async void GetGreeting(string message)
+		private void GetGreeting(string message)
 		{
-			await AppendData(message);
+			 AppendData(message);
 		}
-		private async void XamarinConnectionStatus(bool succesfulStatus)
-		{
-			if (succesfulStatus)
-			{
-				await AppendData("Xamarin client is connected");
-			}
-			else
-			{
-				await AppendData("Xamarin client is not connected");
-			}
-		}
-
-		private async void DisplayConnectionStatus(bool succesfulStatus)
+		private void XamarinConnectionStatus(bool succesfulStatus)
 		{
 			if (succesfulStatus)
 			{
-				await AppendData("Succesfuly connected");
+				AppendData("Xamarin client is connected");
 			}
 			else
 			{
-				await AppendData("Conection failed");
+				AppendData("Xamarin client is not connected");
 			}
 		}
 
-		private void SendAliveStatus()
+		private void DisplayConnectionStatus(bool succesfulStatus)
+		{
+			if (succesfulStatus)
+			{
+				AppendData("Succesfuly connected");
+			}
+			else
+			{
+				AppendData("Conection failed");
+			}
+		}
+
+		private async Task SendAliveStatus()
 		{
 			var connectingMessage = new RequestData { Id = currentId, ActionName=RequestActions.Alive, Message="I`m alive" }.ToJson();
-			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
+			await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 		}
-		private async Task AppendData(string line)
+		private void AppendData(string line)
 		{
 			data.AppendLine(line);
 			ActivitiesInfo = data.ToString();
@@ -123,8 +128,7 @@ namespace WPFClient.UDP.ViewModels
 		private async void SendGreeting()
 		{
 			var greetingMessage = new RequestData() { Id = currentId, ActionName = RequestActions.Greeting, Message = "" }.ToJson();
-			udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMessage), serverEndPoint);
-			await AppendData("Succesfully sent greeting to server for redirecting message");
+			await udpSocket.SendToAsync(Encoding.UTF8.GetBytes(greetingMessage), serverEndPoint);
 		}
 
 		private string _activitiesInfo;
