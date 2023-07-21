@@ -8,26 +8,16 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
+using System.Windows.Input;
+using System.Windows.Threading;
+using WPFClient.UDP.Commands;
 
-namespace WPFClient.UDP
+namespace WPFClient.UDP.ViewModels
 {
-	/// <summary>
-	/// Interaction logic for MainWindow.xaml
-	/// </summary>
-	public partial class MainWindow : Window
+	public class MainViewModel : ViewModelBase
 	{
-		private static string ip;
-		private static string serverIp;
-		private const int port = 8082;
-		private const int currentId = 1;
 
-		private readonly IPEndPoint udpEndPoint;
-		private readonly IPEndPoint serverEndPoint;
-		private readonly IPEndPoint senderEndPoint;
-		private readonly Socket udpSocket;
-		private readonly StringBuilder data;
-		public MainWindow()
+		public MainViewModel()
 		{
 			GetIPFromFile("C:\\Heap\\Programming\\StudyProjects\\ClientServerApp\\IPs.txt");// Change on your Path to file
 			udpEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
@@ -38,7 +28,8 @@ namespace WPFClient.UDP
 			var connectingMessage = new RequestData() { Id = currentId, ActionName = "Connecting", Message = "" }.ToJson();
 			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 			data = new StringBuilder();
-			InitializeComponent();
+			SendGreetingCommand = new DelegateCommand(SendGreeting);
+
 			StartListening();
 		}
 		private async void StartListening()
@@ -107,17 +98,10 @@ namespace WPFClient.UDP
 			var connectingMessage = new RequestData { Id = currentId, ActionName=RequestActions.Alive, Message="I`m alive" }.ToJson();
 			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 		}
-
-		private async void SendGreetingButton_Click(object sender, RoutedEventArgs e)
-		{
-			var greetingMessage = new RequestData() { Id = currentId, ActionName = RequestActions.Greeting, Message = "" }.ToJson();
-			udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMessage), serverEndPoint);
-			await AppendData("Succesfully sent greeting to server for redirecting message");
-		}
 		private async Task AppendData(string line)
 		{
 			data.AppendLine(line);
-			await Dispatcher.InvokeAsync(() => Message.Text = data.ToString());
+			ActivitiesInfo = data.ToString();
 		}
 		private static void GetIPFromFile(string path)
 		{
@@ -136,5 +120,34 @@ namespace WPFClient.UDP
 			}
 			return localIP;
 		}
+		private async void SendGreeting()
+		{
+			var greetingMessage = new RequestData() { Id = currentId, ActionName = RequestActions.Greeting, Message = "" }.ToJson();
+			udpSocket.SendTo(Encoding.UTF8.GetBytes(greetingMessage), serverEndPoint);
+			await AppendData("Succesfully sent greeting to server for redirecting message");
+		}
+
+		private string _activitiesInfo;
+		public string ActivitiesInfo
+		{
+			get => _activitiesInfo;
+			set
+			{
+				_activitiesInfo = value;
+				OnPropertyChanged(nameof(ActivitiesInfo));
+			}
+		}
+		private static string ip;
+		private static string serverIp;
+		private const int port = 8082;
+		private const int currentId = 1;
+
+		private readonly IPEndPoint udpEndPoint;
+		private readonly IPEndPoint serverEndPoint;
+		private readonly IPEndPoint senderEndPoint;
+		private readonly Socket udpSocket;
+		private readonly StringBuilder data;
+		public ICommand SendGreetingCommand { get; }
+
 	}
 }

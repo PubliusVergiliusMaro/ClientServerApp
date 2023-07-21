@@ -1,31 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Net.Sockets;
+using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using Xamarin.Forms;
+using System.Collections.Generic;
 using XamarinClient.UDP.Common;
+using System.Threading.Tasks;
+using System.IO;
 using XamarinClient.UDP.Helpers;
 
-namespace XamarinClient.UDP
+namespace XamarinClient.UDP.ViewModels
 {
-	public partial class MainPage : ContentPage
+	internal class MainViewModel : BaseViewModel
 	{
-		private static string ip = "111.222.3.444";// Change On Yours Mobile IP
-		private const int port = 8083;
-		private const int currentID = 1;
-		private readonly StringBuilder data;
-
-		private readonly IPEndPoint udpEndPoint;
-		private readonly IPEndPoint serverEndPoint;
-		private readonly IPEndPoint senderEndPoint;
-		private readonly Socket udpSocket;
-		public MainPage()
+		public MainViewModel() 
 		{
 			try
 			{
+				SendGreetingCommand = new Command(SendGreeting);
 				udpEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
 				udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 				udpSocket.Bind(udpEndPoint);
@@ -35,7 +27,6 @@ namespace XamarinClient.UDP
 				var connectingMessage = new RequestData() { Id = currentID, ActionName = "Connecting", Message = "message" }.ToJson();
 				udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
 
-				InitializeComponent();
 				StartListening();
 			}
 			catch (SocketException e)
@@ -140,7 +131,7 @@ namespace XamarinClient.UDP
 		private async Task AppendData(string line)
 		{
 			data.AppendLine(line);
-			Device.BeginInvokeOnMainThread(() => entry.Text = data.ToString());
+			Device.BeginInvokeOnMainThread(() => ActivitiesInfo = data.ToString());
 		}
 
 		private static string GetIPFromFile(string path)
@@ -161,5 +152,30 @@ namespace XamarinClient.UDP
 			return localIP;
 		}
 
+		private static string ip = "111.222.3.444";// Change On Yours Mobile IP
+		private const int port = 8083;
+		private const int currentID = 1;
+		private readonly StringBuilder data;
+
+		private readonly IPEndPoint udpEndPoint;
+		private readonly IPEndPoint serverEndPoint;
+		private readonly IPEndPoint senderEndPoint;
+		private readonly Socket udpSocket;
+
+		private string _activitiesInfo;
+		public string ActivitiesInfo
+		{
+			get => _activitiesInfo;
+			set => SetProperty(ref _activitiesInfo, value);
+		}
+		private void SendGreeting()
+		{
+			var connectingMessage = new RequestData { Id = currentID, ActionName="Greeting", Message="alive" }.ToJson();
+			udpSocket.SendTo(Encoding.UTF8.GetBytes(connectingMessage), serverEndPoint);
+			//byte[] buffer = Encoding.UTF8.GetBytes(connectingMessage);	
+			//await udpSocket.SendToAsync(buffer, 0, buffer.Length, SocketFlags.None, serverEndPoint);
+		}
+
+		public Command SendGreetingCommand { get; }
 	}
 }
