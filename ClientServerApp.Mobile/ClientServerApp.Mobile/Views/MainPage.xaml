@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ClientServerApp.Mobile.ViewModels"
+             x:Class="ClientServerApp.Mobile.Views.MainPage">
+    
+    <ContentPage.BindingContext>
+        <vm:MainViewModel/>
+    </ContentPage.BindingContext>
+
+    <ContentPage.Content>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"></ColumnDefinition>
+                <ColumnDefinition Width="10*"></ColumnDefinition>
+                <ColumnDefinition Width="1*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="auto"></RowDefinition>
+            </Grid.RowDefinitions>
+            <Label BackgroundColor="AliceBlue" TextColor="Black" x:Name="entry" Text="{Binding ActivitiesInfo,Mode=OneWay}" Grid.Row="0" FontSize="Medium" Grid.Column="1" />
+            <Button Grid.Row="1" Grid.Column="1" Text="Send Greeting" Command="{Binding SendGreetingCommand}"></Button>
+        </Grid>
+    </ContentPage.Content>
+</ContentPage>
