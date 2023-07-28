@@ -1,4 +1,4 @@
-﻿namespace ClientServerApp.Common
+﻿namespace ClientServerApp.Common.Constants
 {
 	public class RequestActions
 	{
@@ -22,6 +22,15 @@
 		/// Displays for server that client is online
 		/// </summary>
 		public const string Alive = "Alive";
+		/// <summary>
+		/// Action for sending image to another client
+		/// </summary>
+		public const string Image = "Image";
+		/// <summary>
+		/// Action for sending video to another client
+		/// </summary>
+		public const string Video = "Video";
+		public const string SendMeImage = "SendMeImage";
 	}
 	public class RequestMessages
 	{

@@ -15,8 +15,8 @@ namespace ClientServerApp.Mobile.Client
 	internal class UDPClientManager
 	{
 		// Put to the bottom of the project
-		private static string _ip = "192.168.1.109";// Change On Yours Mobile IP
-		private static string _serverIp = "192.168.1.104"; // Change On Server IP
+		private static string _ip = "111.222.3.444";// Change On Yours Mobile IP
+		private static string _serverIp = "111.222.3.444"; // Change On Server IP
 		private static int _port = 8083;
 		private static int _serverPort = 8081;
 		private static int _clientId;
@@ -84,6 +84,7 @@ namespace ClientServerApp.Mobile.Client
 			catch (Exception ex)
 			{
 				AppendData(ex.Message);
+				throw new Exception(ex.Message);
 			}
 		}
 
