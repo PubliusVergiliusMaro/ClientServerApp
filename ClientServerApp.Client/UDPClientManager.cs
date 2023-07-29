@@ -10,26 +10,6 @@ namespace ClientServerApp.Client
 {
 	public class UDPClientManager
 	{
-		// Put to the bottom of the project
-		private static string _ip;
-		private static int _port = 8082;
-		private static string _serverIp;
-		private readonly int _clientId;
-		private readonly StringBuilder _data;
-		private static Dictionary<int, byte[]> _receivedChunks;
-		private static Stopwatch timer;
-		/// <summary>
-		/// Property that response for displaying info
-		/// </summary>
-		private static Action<string> _activitiesInfo;
-		private static Action<byte[]> _imageData;
-
-		private readonly IPEndPoint _udpEndPoint;
-		private readonly IPEndPoint _serverEndPoint;
-		private readonly IPEndPoint _senderEndPoint;// Check if need it here
-		private readonly Socket _udpSocket;
-	
-
 		/// <summary>
 		/// 
 		/// </summary>
@@ -43,9 +23,7 @@ namespace ClientServerApp.Client
 			_data = new StringBuilder();
 
 			_udpEndPoint = new IPEndPoint(IPAddress.Parse(_ip), _port);
-			_udpSocket = new Socket(AddressFamily.InterNetwork,
-									SocketType.Dgram,
-									ProtocolType.Udp);
+			_udpSocket = new Socket(AddressFamily.InterNetwork,SocketType.Dgram,ProtocolType.Udp);
 			_udpSocket.Bind(_udpEndPoint);
 			_serverEndPoint = new IPEndPoint(IPAddress.Parse(_serverIp), 8081);
 
@@ -79,7 +57,8 @@ namespace ClientServerApp.Client
 							{RequestActions.WpfConnectionStatus, () => DisplayConnectionStatus(bool.Parse(request.Message))},
 							{RequestActions.XamarinConnectionStatus, () => XamarinConnectionStatus(bool.Parse(request.Message))},
 							{RequestActions.Greeting, () => GetGreeting(request.Message)},
-							{RequestActions.Image, async() => await GetImage(request.Image,request.ChunkNumber,request.TotalChunks) },
+							{RequestActions.PreparedImage, async() => await ReadyForGetting(request.TotalChunks) },
+							{RequestActions.SendChunk, async() => await GetImageChunk(request.Image,request.ChunkNumber,request.TotalChunks) },
 						};
 						methods[request.ActionName]();
 					}
@@ -91,10 +70,7 @@ namespace ClientServerApp.Client
 				AppendData(ex.Message);
 			}
 		}
-		private void GetGreeting(string message)
-		{
-			AppendData(message);
-		}
+		private void GetGreeting(string message) => AppendData(message);
 		private void XamarinConnectionStatus(bool succesfulStatus)
 		{
 			if (succesfulStatus)
@@ -124,7 +100,12 @@ namespace ClientServerApp.Client
 			var connectingMessage = new RequestData { Id = _clientId, ActionName=RequestActions.Alive, Message="I`m alive" }.ToJson();
 			await _udpSocket.SendToAsync(Encoding.UTF8.GetBytes(connectingMessage), _serverEndPoint);
 		}
-		private void AppendData(string line)
+
+		/// <summary>
+		/// TODO: Use here stringbuilder
+		/// </summary>
+		/// <param name="line"></param>
+		private void AppendData(string line) 
 		{
 			_data.AppendLine(line);
 			_activitiesInfo(_data.ToString());
@@ -135,78 +116,39 @@ namespace ClientServerApp.Client
 			_ip = lines[0];
 			_serverIp = lines[1];
 		}
-		private static string GetLocalIP()
+
+		private async Task ReadyForGetting(int? totalChunks)
 		{
-			string localIP;
-			using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+			AppendData($"Image prepared. Starting getting image. {totalChunks} chunks");
+
+			for (int i = 0; i < totalChunks; i++)
 			{
-				socket.Connect("8.8.8.8", 65530);
-				IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-				localIP = endPoint.Address.ToString();
+				_receivedChunks[i] = new byte[0];
 			}
-			return localIP;
+			await GetImage(totalChunks);
 		}
-		public async Task SendVideo()
+
+		private async Task GetImage(int? totalChunks)
 		{
-			//C:\Users\user\Desktop\vidos.mp4
-			string videoPath = @"C:\Users\user\Desktop\vidos.mp4";
-			byte[] buffer;
-			using (FileStream stream = new FileStream(videoPath, FileMode.Open, FileAccess.Read))
+			int count = 0;
+			while (true)
 			{
-				buffer = new byte[stream.Length];
-				await stream.ReadAsync(buffer, 0, buffer.Length);
-			}
-
-			int totalChunks = (int)Math.Ceiling((double)buffer.Length / ChunkData.VIDEO_CHUNK_MAX_SIZE);
-
-			int bytesCount = 0;
-			for (int chunkNumber = 0; chunkNumber < totalChunks; chunkNumber++)
-			{
-				int startIndex = chunkNumber * ChunkData.VIDEO_CHUNK_MAX_SIZE;
-				int remainingBytes = buffer.Length - startIndex;
-				int chunkSize = Math.Min(ChunkData.VIDEO_CHUNK_MAX_SIZE, remainingBytes);
-
-				byte[] chunkData = new byte[chunkSize];
-				Array.Copy(buffer, startIndex, chunkData, 0, chunkSize);
-
-				bytesCount++;
-				// Add client ID
-				var message = new RequestData() { Id= 1, ActionName=RequestActions.Video, Message = "", Video = chunkData, TotalChunks = totalChunks, ChunkNumber =  chunkNumber+1 }.ToJson();
-				bytesCount +=  chunkData.Length;
-				await _udpSocket.SendToAsync(Encoding.UTF8.GetBytes(message), _serverEndPoint);	
-				//if(chunkNumber % 10 == 0)
-				await Task.Delay(1);
-			}
-		}
-		public async Task SendImage()
-		{
-			//C:\Users\user\Desktop\Im.jpg
-			string imagePath = @"C:\Users\user\Desktop\Im.jpg";
-			byte[] buffer;
-			using (FileStream stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
-			{
-				buffer = new byte[stream.Length];
-				await stream.ReadAsync(buffer, 0, buffer.Length);
-			}
-			int totalChunks = (int)Math.Ceiling((double)buffer.Length/ChunkData.IMAGE_CHUNK_MAX_SIZE);
-			int bytesCount = 0;
-			for (int chunkNumber = 0; chunkNumber < totalChunks; chunkNumber++)
-			{
-				int startIndex = chunkNumber * ChunkData.IMAGE_CHUNK_MAX_SIZE;
-				int remainingBytes = buffer.Length - startIndex;
-				int chunkSize = Math.Min(ChunkData.IMAGE_CHUNK_MAX_SIZE, remainingBytes);
-
-				byte[] chunkData = new byte[chunkSize];
-				Array.Copy(buffer, startIndex, chunkData, 0, chunkSize);
-
-				bytesCount++;
-
-				// Add client ID
-				var message = new RequestData() { Id= 1, ActionName=RequestActions.Image, Message = "", Image = chunkData, TotalChunks = totalChunks, ChunkNumber =  chunkNumber+1 }.ToJson();
-				bytesCount +=  chunkData.Length;
-				await _udpSocket.SendToAsync(Encoding.UTF8.GetBytes(message), _serverEndPoint);
-				//if (chunkNumber % 10 == 0)
-					await Task.Delay(1);
+				foreach (var chunk in _receivedChunks.Where(val => val.Value.Length == 0))
+				{
+					count++;
+					var message = new RequestData { Id = _clientId, ActionName=RequestActions.GetChunk, ChunkNumber=chunk.Key }.ToJson();
+					await _udpSocket.SendToAsync(Encoding.UTF8.GetBytes(message), _serverEndPoint);
+				
+					if (count == _receivedChunks.Where(val => val.Value.Length == 0).Count())
+					{
+						await Task.Delay(1);
+						count = 0;
+					}
+				}
+				if(_receivedChunks.Where(val => val.Value.Length == 0).Count() == 0)
+				{
+					break;
+				}
 			}
 		}
 		public async Task AskForImage()
@@ -215,10 +157,8 @@ namespace ClientServerApp.Client
 			await _udpSocket.SendToAsync(Encoding.UTF8.GetBytes(askMessage), _serverEndPoint);
 			AppendData("Send ask");
 		}
-		private async Task GetImage(byte[] chunk, int? chunkNumber, int? totalChunks)
+		private async Task GetImageChunk(byte[] chunk, int? chunkNumber, int? totalChunks)
 		{
-			//int sequenceNumber = BitConverter.ToInt32(chunk, 0);
-			
 			int startIndex = (int)chunkNumber * ChunkData.IMAGE_CHUNK_MAX_SIZE;
 
 			byte[] chunkData = new byte[chunk.Length];
@@ -226,33 +166,50 @@ namespace ClientServerApp.Client
 
 			_receivedChunks[(int)chunkNumber] = chunkData;
 
-			AppendData($"Loading image packets: {(double)_receivedChunks.Count/totalChunks * 100.0:F2}%");
-			//await Console.Out.WriteLineAsync();
+			//AppendData($"Loading image packets: {_receivedChunks.Where(c=>c.Value.Length >0).Count()}");
 
-			if (_receivedChunks.Count == totalChunks)
+			if (_receivedChunks.Where(chunk=>chunk.Value.Length > 0).Count() == totalChunks)
 			{
 				byte[] assembledImageData;
 				using (MemoryStream imgStream = new MemoryStream())
 				{
-					for (int i = 1; i <= totalChunks; i++)
+					for (int i = 0; i < totalChunks; i++)
 					{
 						byte[] tmpdata = _receivedChunks[i];
-						imgStream.Write(tmpdata, 0, tmpdata.Length);
+						await imgStream.WriteAsync(tmpdata, 0, tmpdata.Length);
 					}
 					assembledImageData = imgStream.ToArray();
 
-
-					//SaveImageFromBytes(assembledImageData, @"C:\Users\user\Desktop\TEST", $"FirstImage{new Random().Next(0, 1000000)}.png");
-					AppendData("Succesfully Get Image");
+					//AppendData("Succesfully Get Image");
 					_imageData(assembledImageData);
+					_receivedChunks = new Dictionary<int, byte[]>();
 				}
 			}
 		}
-		
 		public async Task SendGreeting()
 		{
 			var greetingMessage = new RequestData() { Id = _clientId, ActionName = RequestActions.Greeting, Message = "" }.ToJson();
 			await _udpSocket.SendToAsync(Encoding.UTF8.GetBytes(greetingMessage), _serverEndPoint);
 		}
+
+		private static string _ip;
+		private static int _port = 8082;
+		private static string _serverIp;
+		private readonly int _clientId;
+		private readonly StringBuilder _data;
+		private static Dictionary<int, byte[]> _receivedChunks;
+		private static Stopwatch timer;
+		/// <summary>
+		/// Property that response for displaying info
+		/// </summary>
+		private static Action<string> _activitiesInfo;
+		private static Action<byte[]> _imageData;
+
+		private readonly IPEndPoint _udpEndPoint;
+		private readonly IPEndPoint _serverEndPoint;
+		private readonly IPEndPoint _senderEndPoint;// Check if need it here
+		private readonly Socket _udpSocket;
+
+
 	}
 }

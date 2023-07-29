@@ -16,11 +16,21 @@
                 <ColumnDefinition Width="1*"></ColumnDefinition>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="auto"></RowDefinition>
-                <RowDefinition Height="auto"></RowDefinition>
+                <RowDefinition Height="3*"></RowDefinition>
+                <RowDefinition Height="1.2*"></RowDefinition>
+                <RowDefinition Height="10*"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
             </Grid.RowDefinitions>
-            <Label BackgroundColor="AliceBlue" TextColor="Black" x:Name="entry" Text="{Binding ActivitiesInfo,Mode=OneWay}" Grid.Row="0" FontSize="Medium" Grid.Column="1" />
-            <Button Grid.Row="1" Grid.Column="1" Text="Send Greeting" Command="{Binding SendGreetingCommand}"></Button>
+            <Grid Grid.Row="0" Grid.Column="1">
+                <Label BackgroundColor="AliceBlue" TextColor="Black" x:Name="entry" Text="{Binding ActivitiesInfo,Mode=OneWay}" FontSize="Medium" />
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="1">
+                <Button Grid.Column="0" Text="Send Greeting" Command="{Binding SendGreetingCommand}"></Button>
+                <Button Grid.Column="1" Text="Prepare image for sending" Command="{Binding PrepareImageCommand}"></Button>
+            </Grid>
+            <Grid Grid.Row="2" Grid.Column="1" Background="LightGray">
+                <Image Source="{Binding Screen, Mode=TwoWay}"></Image>
+            </Grid>
         </Grid>
     </ContentPage.Content>
 </ContentPage>

@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace ClientServerApp.Mobile.Common
+﻿namespace ClientServerApp.Mobile.Common
 {
-	internal class RequestActions
+	public class RequestActions
 	{
 		/// <summary>
 		/// Displays for client that server asks if client is online
@@ -26,8 +22,33 @@ namespace ClientServerApp.Mobile.Common
 		/// Displays for server that client is online
 		/// </summary>
 		public const string Alive = "Alive";
+		/// <summary>
+		/// Action for sending image to another client
+		/// </summary>
+		public const string Image = "Image";
+		/// <summary>
+		/// Action for sending video to another client
+		/// </summary>
+		public const string Video = "Video";
+		public const string SendMeImage = "SendMeImage";
+		/// <summary>
+		/// Action that signals that Image is ready for sending
+		/// </summary>
+		public const string PrepareImage = "PrepareImage";
+		/// <summary>
+		/// Action that signals readiness to receive messages 
+		/// </summary>
+		public const string StartGettingImage = "StartGettingImage";
+		/// <summary>
+		/// 
+		/// </summary>
+		public const string GetChunk = "GetChunk";
+		/// <summary>
+		/// 
+		/// </summary>
+		public const string SendChunk = "SendChunk";
 	}
-	internal class RequestMessages
+	public class RequestMessages
 	{
 		/// <summary>
 		/// Message that server sends with IsAlive Request Action

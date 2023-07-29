@@ -21,11 +21,11 @@ namespace ClientServerApp.Desktop.ViewModels
 			//SendVideoCommand = new DelegateCommand(SendVideo);
 		}
 
-		private async void SendVideo()
-		{
-			await _clientManager.SendVideo();
-			MessageBox.Show("Succesfully sended");
-		}
+		//private async void SendVideo()
+		//{
+		//	await _clientManager.SendVideo();
+		//	MessageBox.Show("Succesfully sended");
+		//}
 
 		private async void SendGreeting()
 		{

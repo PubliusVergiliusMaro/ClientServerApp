@@ -31,6 +31,22 @@
 		/// </summary>
 		public const string Video = "Video";
 		public const string SendMeImage = "SendMeImage";
+		/// <summary>
+		/// Action that signals that Image is ready for sending
+		/// </summary>
+		public const string PreparedImage = "PrepareImage";
+		/// <summary>
+		/// Action that signals readiness to receive messages 
+		/// </summary>
+		public const string StartGettingImage = "StartGettingImage";
+		/// <summary>
+		/// 
+		/// </summary>
+		public const string GetChunk = "GetChunk";
+		/// <summary>
+		/// 
+		/// </summary>
+		public const string SendChunk = "SendChunk";
 	}
 	public class RequestMessages
 	{
