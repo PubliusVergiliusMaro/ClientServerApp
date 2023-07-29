@@ -22,14 +22,16 @@
                 <RowDefinition Height="*"></RowDefinition>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0" Grid.Column="1">
-                <Label BackgroundColor="AliceBlue" TextColor="Black" x:Name="entry" Text="{Binding ActivitiesInfo,Mode=OneWay}" FontSize="Medium" />
+                <ScrollView>
+                    <Label BackgroundColor="AliceBlue" TextColor="Black" x:Name="entry" Text="{Binding ActivitiesInfo,Mode=OneWay}" FontSize="Medium" />
+                </ScrollView>
             </Grid>
             <Grid Grid.Row="1" Grid.Column="1">
                 <Button Grid.Column="0" Text="Send Greeting" Command="{Binding SendGreetingCommand}"></Button>
                 <Button Grid.Column="1" Text="Prepare image for sending" Command="{Binding PrepareImageCommand}"></Button>
             </Grid>
             <Grid Grid.Row="2" Grid.Column="1" Background="LightGray">
-                <Image Source="{Binding Screen, Mode=TwoWay}"></Image>
+                <Image Source="{Binding Screen}"></Image>
             </Grid>
         </Grid>
     </ContentPage.Content>

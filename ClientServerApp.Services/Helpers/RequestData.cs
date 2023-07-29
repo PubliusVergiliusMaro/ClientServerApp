@@ -1,10 +1,20 @@
 ﻿using Newtonsoft.Json;
+using System.Net.Http.Headers;
 
 namespace ClientServerApp.Services.Helpers
 {
 	public class RequestData
 	{
-		public int Id { get; set; }
+        public RequestData()
+        {
+			Id = -1;
+			ActionName = "";
+			Message = "";
+			Image = new byte[0];
+			TotalChunks = -1;
+			ChunkNumber = -1;
+        }
+        public int Id { get; set; }
 		public string ActionName { get; set; }
 		public string? Message { get; set; }
 		public byte[]? Image { get; set; }

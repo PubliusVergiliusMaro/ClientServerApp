@@ -1,5 +1,6 @@
 ﻿using ClientServerApp.Mobile.Client;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -13,6 +14,7 @@ namespace ClientServerApp.Mobile.ViewModels
 		private readonly UDPClientManager _clientManager;
 		public MainViewModel()
 		{
+			_activitiesInfo = new StringBuilder();
 			_clientManager = new UDPClientManager(cinfo => ActivitiesInfo = cinfo);
 			SendGreetingCommand = new Command(SendGreeting);
 			PrepareImageCommand = new Command(PrepareImage);
@@ -23,7 +25,8 @@ namespace ClientServerApp.Mobile.ViewModels
 			var stream = await screenshot.OpenReadAsync();
 			Screen = ImageSource.FromStream(() => stream);
 		}
-		private async void PrepareImage(object obj) // TODO: Create one screenshot and save Screen in tmp property
+
+		private async void PrepareImage(object obj)
 		{
 			await MakeScreenshot();
 
@@ -36,22 +39,30 @@ namespace ClientServerApp.Mobile.ViewModels
 
 			await MakeScreenshot();
 		}
-
 		private async void SendGreeting()
 		{
 			await _clientManager.SendGreeting();
 		}
+
 		private ImageSource _screen;
 		public ImageSource Screen
 		{
 			get => _screen;
-			set => SetProperty(ref _screen, value);
+			set
+			{ 
+				SetProperty(ref _screen, value);
+			}
 		}
-		private string _activitiesInfo;
+		private StringBuilder _activitiesInfo;
 		public string ActivitiesInfo
 		{
-			get => _activitiesInfo;
-			set => SetProperty(ref _activitiesInfo, value);
+			get => _activitiesInfo.ToString();
+			set
+			{
+				_activitiesInfo.AppendLine(value);
+				OnPropertyChanged(nameof(ActivitiesInfo));
+				//SetProperty(ref _data, _data);
+			}
 		}
 		public ICommand SendGreetingCommand { get; }
 		public ICommand PrepareImageCommand { get; }

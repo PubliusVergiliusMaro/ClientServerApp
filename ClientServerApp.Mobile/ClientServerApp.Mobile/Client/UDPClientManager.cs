@@ -10,43 +10,20 @@ using System.IO;
 using ClientServerApp.Mobile.Helpers;
 using ClientServerApp.Mobile.Common;
 using System.Collections;
+using Newtonsoft.Json;
 
 namespace ClientServerApp.Mobile.Client
 {	
 	internal class UDPClientManager
 	{
-		// Put to the bottom of the project
-		private static string _ip = "192.168.1.103";// Change On Yours Mobile IP
-		private static string _serverIp = "192.168.1.104"; // Change On Server IP
-		private static int _port = 8083;
-		private static int _serverPort = 8081;
-		private static int _clientId;
-		private readonly Action<string> _activitiesInfo;
-		private static Dictionary<int, byte[]> _preparedImage;
-
-		private readonly StringBuilder _data;
-		private readonly IPEndPoint _udpEndPoint;
-		private readonly IPEndPoint _serverEndPoint;
-		private readonly IPEndPoint _senderEndPoint;// Check if need it here
-		private readonly Socket _udpSocket;
 		
-		/// <summary>
-		/// Screenshot in byte array
-		/// </summary>
-		public byte[] ImageBytes 
-		{
-			private get; 
-			set; 
-		}
 		public UDPClientManager(Action<string> activitiesInfo)
 		{
-			
 			_preparedImage = new Dictionary<int, byte[]>();
 			_activitiesInfo=activitiesInfo;
 			_udpEndPoint = new IPEndPoint(IPAddress.Parse(_ip), _port);
 			_udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			_udpSocket.Bind(_udpEndPoint);
-			_data = new StringBuilder();
 
 			_serverEndPoint = new IPEndPoint(IPAddress.Parse(_serverIp), _serverPort);// Change On Yours Server IP
 			var connectingMessage = new RequestData() { Id = _clientId, ActionName = "Connecting", Message = "message" }.ToJson();
@@ -55,76 +32,33 @@ namespace ClientServerApp.Mobile.Client
 		}
 		private async Task StartListening()
 		{
-			try
+			while (true)
 			{
-				while (true)
+				var buffer = new byte[256];
+				string answer = "";
+				EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
+				RequestData request = new RequestData();
+					
+				// Initialize all actions on requests
+				var methods = new Dictionary<string, Action>
 				{
-					var buffer = new byte[256];
-					string answer = "";
-					EndPoint senderEndPoint = new IPEndPoint(IPAddress.Any, 0);
-					int id = 0;
-					string action = "";
-					string message = "";
-					byte[] image = new byte[0];
-					byte[] video = new byte[0];
-					int totalChunks = 0;
-					int chunkNumber = 0;
-					do
-					{
-						var result = await _udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, new IPEndPoint(IPAddress.Any, 0));
-						senderEndPoint = result.RemoteEndPoint;
-						//
-						// answer format -> ID:ActionName:Message:Image
-						answer = Encoding.UTF8.GetString(buffer, 0, result.ReceivedBytes);
-						//
-
-						#region Get parts of Answer TODO: Try to change on json
-						string[] parts = answer.Split(':');
-						if(parts.Length != 6)
-							throw new Exception("Not right format of answer");
-						if (int.TryParse(parts[0], out int ID))
-						id = ID;
-						else
-						{
-							throw new Exception("Not right format of answer");
-						}
-						action = parts[1].Replace(":", "");
-						message = parts[2].Replace(":", "");
-						image = Encoding.UTF8.GetBytes(parts[3].Replace(":", ""));
+					{ RequestActions.IsAlive, SendAliveStatus },
+					{ RequestActions.XamarinConnectionStatus,() => DisplayConnectionStatus(request.Message) },
+					{ RequestActions.WpfConnectionStatus, () => WpfConnectionStatus(request.Message) },
+			    	{ RequestActions.Greeting, () => GetGreeting(request.Message) },
+					{ RequestActions.SendMeImage,PrepareImage},
+					{ RequestActions.GetChunk, () => SendChunk(request.ChunkNumber)}
+				};
+				do
+				{
+					var result = await _udpSocket.ReceiveFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, new IPEndPoint(IPAddress.Any, 0));
+					senderEndPoint = result.RemoteEndPoint;
+					answer = Encoding.UTF8.GetString(buffer, 0, result.ReceivedBytes);
+					request = JsonConvert.DeserializeObject<RequestData>(answer);
 						
-						if (int.TryParse(parts[4].Replace(":", ""), out int total))
-							totalChunks = total;
-						else
-						{
-							throw new Exception("Not right format of answer");
-						}
-
-						if (int.TryParse(parts[5].Replace(":", ""), out int num))
-								chunkNumber = num;
-						else
-						{
-							throw new Exception("Not right format of answer");
-						}
-						#endregion
-						//request = JsonConvert.DeserializeObject<RequestManager>(answer);
-						
-						var methods = new Dictionary<string, Action>
-						{
-							{ RequestActions.IsAlive, SendAliveStatus },
-							{ RequestActions.XamarinConnectionStatus,() => DisplayConnectionStatus(message) },
-							{ RequestActions.WpfConnectionStatus, () => WpfConnectionStatus(message) },
-							{ RequestActions.Greeting, () => GetGreeting(message) },
-							{ RequestActions.SendMeImage,PrepareImage},
-							{ RequestActions.GetChunk, () => SendChunk(chunkNumber)}
-						};
-						methods[action]();
-					}
-					while (_udpSocket.Available > 0);
+					methods[request.ActionName]();
 				}
-			}
-			catch (Exception ex)
-			{
-				AppendData(ex.Message);
+				while (_udpSocket.Available > 0);
 			}
 		}
 		private void SendChunk(int chunkNumber)
@@ -136,7 +70,7 @@ namespace ClientServerApp.Mobile.Client
 		}
 		public void PrepareImage()
 		{
-			AppendData("Someone wants image");
+			_activitiesInfo("Someone wants image");
 			// Check if array with bytes is more than 10 bytes
 			if (ImageBytes.Length > 10)
 			{
@@ -155,27 +89,31 @@ namespace ClientServerApp.Mobile.Client
 					if (_preparedImage.Count == totalChunks)
 					{
 						var succesMessage = new RequestData() { Id = _clientId, ActionName = RequestActions.PrepareImage, TotalChunks = totalChunks }.ToJson();
-						AppendData($"Size of prepered image is {totalChunks} chunks");
+						_activitiesInfo($"Size of prepered image is {totalChunks} chunks");
 						SendData(succesMessage, _serverEndPoint);
 					}
 				}
+			}
+			else
+			{
+				_activitiesInfo("Prepare image for user");
 			}
 		}
 
 		private void GetGreeting(string message)
 		{
-			AppendData(message);
+			_activitiesInfo(message);
 		}
 
 		private void WpfConnectionStatus(string successfulStatus)
 		{
 			if (successfulStatus == "true")
 			{
-				AppendData("Wpf client is connected");
+				_activitiesInfo("Wpf client is connected");
 			}
 			else if (successfulStatus == "false")
 			{
-				AppendData("Wpf client in not connected");
+				_activitiesInfo("Wpf client in not connected");
 			}
 			else
 				throw new Exception("Status is not equal true/false format.");
@@ -185,11 +123,11 @@ namespace ClientServerApp.Mobile.Client
 		{
 			if (successfulStatus == "true")
 			{
-				AppendData("Succesfully connected");
+				_activitiesInfo("Succesfully connected");
 			}
 			else if (successfulStatus == "false")
 			{
-				AppendData("Connection failed");
+				_activitiesInfo("Connection failed");
 			}
 			else
 				throw new Exception("Status is not equal true/false format.");
@@ -200,18 +138,10 @@ namespace ClientServerApp.Mobile.Client
 			var connectingMessage = new RequestData { Id = _clientId, ActionName="Alive", Message="alive" }.ToJson();
 			SendData(connectingMessage, _serverEndPoint);
 		}
-		private void AppendData(string line)
-		{
-			_data.AppendLine(line);
-			Device.BeginInvokeOnMainThread(() => _activitiesInfo(_data.ToString()));
-		}
-
-		private static string GetIPFromFile(string path)
-		{
-			string[] lines = File.ReadAllLines(path);
-			string ipAdress = lines[0];
-			return ipAdress;
-		}
+		/// <summary>
+		/// Method for getting IP of this client
+		/// </summary>
+		/// <returns></returns>
 		private static string GetLocalIP()
 		{
 			string localIP;
@@ -223,14 +153,23 @@ namespace ClientServerApp.Mobile.Client
 			}
 			return localIP;
 		}
+		/// <summary>
+		/// Send "Greeting message" to the WPF client
+		/// </summary>
+		/// <returns></returns>
 		public async Task SendGreeting()
 		{
 			var connectingMessage = new RequestData { Id = _clientId, ActionName="Greeting", Message="alive" }.ToJson();
 			SendData(connectingMessage, _serverEndPoint);
 		}
-		private void SendData(string message, IPEndPoint endPoint)
+		/// <summary>
+		/// Method that responds for Async sending data to some endpoint
+		/// </summary>
+		/// <param name="data">Data that we send</param>
+		/// <param name="endPoint">EndPoint of Receiver</param>
+		private void SendData(string data, IPEndPoint endPoint)
 		{
-			byte[] buffer = Encoding.UTF8.GetBytes(message);
+			byte[] buffer = Encoding.UTF8.GetBytes(data);
 
 			var waitHandle = new ManualResetEvent(false);
 			var sendEvent = new SocketAsyncEventArgs();
@@ -245,5 +184,52 @@ namespace ClientServerApp.Mobile.Client
 				throw new SocketException((int)sendEvent.SocketError);
 			}
 		}
+		/// <summary>
+		/// IP of a current client
+		/// </summary>
+		private static string _ip = "192.168.1.103";// Change On Yours Mobile IP
+		/// <summary>
+		/// IP of a server
+		/// </summary>
+		private static string _serverIp = "192.168.1.104"; // Change On Server IP
+		/// <summary>
+		/// Port of a current client 
+		/// </summary>
+		private static int _port = 8083;
+		/// <summary>
+		/// Server`s port
+		/// </summary>
+		private static int _serverPort = 8081;
+		/// <summary>
+		/// Id of this client
+		/// </summary>
+		private static int _clientId;
+
+		/// <summary>
+		/// Field that in UI represents data 
+		/// </summary>
+		private readonly Action<string> _activitiesInfo;
+		/// <summary>
+		/// Dictionary of a Image that is going to sent
+		/// </summary>
+		private static Dictionary<int, byte[]> _preparedImage;
+
+		/// <summary>
+		/// EndPoint of current client
+		/// </summary>
+		private readonly IPEndPoint _udpEndPoint;
+		/// <summary>
+		/// Server`s endpoint
+		/// </summary>
+		private readonly IPEndPoint _serverEndPoint;
+		/// <summary>
+		/// Socket of current client
+		/// </summary>
+		private readonly Socket _udpSocket;
+		/// <summary>
+		/// Screenshot in byte array
+		/// </summary>
+		public byte[] ImageBytes { private get; set; }
+
 	}
 }
