@@ -20,11 +20,11 @@ namespace ClientServerApp.Mobile.Models
 		/// </summary>
 		public IPEndPoint DekstopEndPoint { get; set; }
 		/// <summary>
-		/// Shows whether the mobile client is online
+		/// Displays whether the mobile client is online
 		/// </summary>
 		public bool IsMobileClientConnected { get; set; }
 		/// <summary>
-		/// Shows whether the dekstop client is online
+		/// Displays whether the dekstop client is online
 		/// </summary>
 		public bool IsDekstopClientConnected { get; set; }
 		/// <summary>

@@ -1,5 +1,8 @@
 ﻿namespace ClientServerApp.Common.Constants
 {
+	/// <summary>
+	/// 
+	/// </summary>
 	public class RequestActions
 	{
 		/// <summary>
@@ -27,9 +30,8 @@
 		/// </summary>
 		public const string Image = "Image";
 		/// <summary>
-		/// Action for sending video to another client
+		/// Action that ask Xamarin client to prepare screenshot
 		/// </summary>
-		public const string Video = "Video";
 		public const string SendMeImage = "SendMeImage";
 		/// <summary>
 		/// Action that signals that Image is ready for sending
@@ -39,6 +41,10 @@
 		/// Action that signals readiness to receive messages 
 		/// </summary>
 		public const string StartGettingImage = "StartGettingImage";
+		/// <summary>
+		/// 
+		/// </summary>
+		public const string Connecting = "Connecting";
 		/// <summary>
 		/// 
 		/// </summary>
